@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Notruf Niedersachsen</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1e73be;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      color: black;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      max-width: 480px;
+      width: 100%;
+      margin: 10px;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+    button {
+      background: #1e73be;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background: #155a96;
+    }
+    #dashboard, #news, #logout {
+      /* Nicht standardmäßig ausblenden, wird im Script gesteuert */
+    }
+    .news-card {
+      text-align: left;
+      background: #f9f9f9;
+      margin: 10px 0;
+      padding: 15px 15px 20px 15px;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      color: #222;
+    }
+    .news-card img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .news-card h3 {
+      margin: 0 0 5px 0;
+      font-weight: bold;
+    }
+    .delete-news-btn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 8px;
+      width: 100%;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background-color 0.3s ease;
+    }
+    .delete-news-btn:hover {
+      background: #c0392b;
+    }
+
+    /* Flex container für News + Dashboard */
+    #main-wrapper {
+      display: flex;
+      gap: 20px;
+      max-width: 1000px;
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    #news, #dashboard {
+      flex: 1;
+    }
+
+    /* Discord Button */
+    .discord-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: linear-gradient(270deg, 
+        rgb(255, 0, 0), 
+        rgb(0, 255, 0), 
+        rgb(0, 0, 255), 
+        rgb(255, 0, 0)
+      );
+      background-size: 600% 600%;
+      color: white;
+      font-weight: bold;
+      padding: 8px 24px;
+      border-radius: 6px;
+      font-size: 1em;
+      animation: rgbGradient 15s ease infinite;
+      cursor: pointer;
+      width: 280px;
+      user-select: none;
+      text-decoration: none;
+      margin-top: 15px;
+      box-sizing: border-box;
+      border: none;
+    }
+    .discord-btn img {
+      width: 40px;
+      height: 40px;
+    }
+    .discord-btn:hover {
+      filter: brightness(1.1);
+    }
+
+    @keyframes rgbGradient {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="auth" class="container" style="max-width: 350px;">
+  <h2>Willkommen!</h2>
+  <input type="email" id="email" placeholder="E-Mail" autocomplete="username" />
+  <input type="password" id="password" placeholder="Passwort" autocomplete="current-password" />
+  <button id="loginBtn">Anmelden</button>
+  <button id="registerBtn">Registrieren</button>
+  <p id="authMsg" style="color: red; min-height: 20px;"></p>
+</div>
+
+<div id="main-wrapper" style="display:none;">
+  <div id="news" class="container">
+    <h2>News – Notruf Niedersachsen</h2>
+    <div id="newsList"></div>
+    <a href="https://discord.gg/TH7whtJp3b" target="_blank" rel="noopener noreferrer" class="discord-btn" id="discordBtn">
+<img src="https://cdn-icons-png.flaticon.com/512/2111/2111370.png" alt="Discord Logo" />
+      Zum Discord-Server
+    </a>
+    <button id="logout" style="margin-top:20px; width: 100%;">Abmelden</button>
+  </div>
+
+  <div id="dashboard" class="container" style="display:none;">
+    <h2>Admin-Dashboard</h2>
+    <input type="text" id="newsTitle" placeholder="Titel" />
+    <textarea id="newsContent" placeholder="Inhalt" style="height:80px;"></textarea>
+    <input type="file" id="newsImage" accept="image/*" />
+    <button id="addNewsBtn">News hinzufügen</button>
+
+    <!-- Moderatoren Discord Button nur für Admins -->
+    <a href="https://discord.gg/TH7whtJp3b" target="_blank" class="discord-btn" id="modDiscordBtn" rel="noopener noreferrer" style="display:none; margin-top: 30px;">
+<img src="https://cdn-icons-png.flaticon.com/512/2111/2111370.png" alt="Discord Logo" />
+      Moderatoren Discord in arbeit!
+    </a>
+  </div>
+</div>
+
+<script>
+  const ADMIN_EMAIL = "Emergency-Niedersachsen.moderator@gmail.com";
+  const ADMIN_PASSWORD = "Emergency-niedersachsen.moderator.2024!?_Admin-Passwort";
+  const USERS_KEY = "nn_users";
+  const NEWS_KEY = "nn_news";
+
+  const authDiv = document.getElementById("auth");
+  const newsDiv = document.getElementById("news");
+  const dashboardDiv = document.getElementById("dashboard");
+  const logoutBtn = document.getElementById("logout");
+  const mainWrapper = document.getElementById("main-wrapper");
+  const modDiscordBtn = document.getElementById("modDiscordBtn");
+
+  const loginBtn = document.getElementById("loginBtn");
+  const registerBtn = document.getElementById("registerBtn");
+  const emailInput = document.getElementById("email");
+  const passInput = document.getElementById("password");
+  const authMsg = document.getElementById("authMsg");
+
+  const newsList = document.getElementById("newsList");
+  const addNewsBtn = document.getElementById("addNewsBtn");
+  const newsTitle = document.getElementById("newsTitle");
+  const newsContent = document.getElementById("newsContent");
+  const newsImage = document.getElementById("newsImage");
+
+  const save = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+  const load = key => JSON.parse(localStorage.getItem(key) || "[]");
+
+  const initApp = () => {
+    const currentUser = JSON.parse(sessionStorage.getItem("nn_currentUser"));
+    if (!currentUser) {
+      authDiv.style.display = "block";
+      mainWrapper.style.display = "none";
+      authMsg.textContent = "";
+      return;
+    }
+
+    authDiv.style.display = "none";
+    mainWrapper.style.display = "flex";
+
+    const news = load(NEWS_KEY);
+    newsList.innerHTML = news.map(n => `
+      <div class="news-card">
+        ${n.image ? `<img src="${n.image}" alt="Bild zur News">` : ''}
+        <h3>${escapeHtml(n.title)}</h3>
+        <p>${escapeHtml(n.content)}</p>
+        ${currentUser.isAdmin ? `<button class="delete-news-btn" data-title="${escapeHtml(n.title)}">🗑️ Löschen</button>` : ''}
+      </div>
+    `).join("");
+
+    dashboardDiv.style.display = currentUser.isAdmin ? "block" : "none";
+    modDiscordBtn.style.display = currentUser.isAdmin ? "flex" : "none";
+
+    // Delete buttons Event Listener anlegen
+    if (currentUser.isAdmin) {
+      document.querySelectorAll(".delete-news-btn").forEach(btn => {
+        btn.onclick = () => {
+          const title = btn.getAttribute("data-title");
+          let news = load(NEWS_KEY);
+          news = news.filter(n => n.title !== title);
+          save(NEWS_KEY, news);
+          initApp();
+        }
+      });
+    }
+  };
+
+  loginBtn.addEventListener("click", () => {
+    const email = emailInput.value.trim();
+    const pw = passInput.value;
+
+    if (!email || !pw) {
+      authMsg.textContent = "Bitte alle Felder ausfüllen.";
+      return;
+    }
+
+    if (email === ADMIN_EMAIL && pw === ADMIN_PASSWORD) {
+      sessionStorage.setItem("nn_currentUser", JSON.stringify({
+        email: email,
+        isAdmin: true
+      }));
+      initApp();
+      return;
+    }
+
+    const users = load(USERS_KEY);
+    const found = users.find(u => u.email === email && u.password === pw);
+    if (!found) {
+      authMsg.textContent = "Login fehlgeschlagen.";
+      return;
+    }
+
+    sessionStorage.setItem("nn_currentUser", JSON.stringify({
+      email: email,
+      isAdmin: false
+    }));
+    initApp();
+  });
+
+  registerBtn.addEventListener("click", () => {
+    const email = emailInput.value.trim();
+    const pw = passInput.value;
+
+    if (!email || !pw) {
+      authMsg.textContent = "Bitte alle Felder ausfüllen.";
+      return;
+    }
+
+    const users = load(USERS_KEY);
+    if (users.find(u => u.email === email)) {
+      authMsg.textContent = "Benutzer existiert bereits!";
+      return;
+    }
+
+    users.push({ email: email, password: pw });
+    save(USERS_KEY, users);
+
+    sessionStorage.setItem("nn_currentUser", JSON.stringify({
+      email: email,
+      isAdmin: false
+    }));
+    initApp();
+  });
+
+  logoutBtn.addEventListener("click", () => {
+    sessionStorage.removeItem("nn_currentUser");
+    initApp();
+  });
+
+  addNewsBtn.addEventListener("click", () => {
+    const title = newsTitle.value.trim();
+    const content = newsContent.value.trim();
+    const file = newsImage.files[0];
+
+    if (!title || !content) {
+      alert("Bitte Titel und Inhalt eingeben.");
+      return;
+    }
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        saveNews(title, content, e.target.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      saveNews(title, content, null);
+    }
+
+    newsTitle.value = "";
+    newsContent.value = "";
+    newsImage.value = "";
+  });
+
+  function saveNews(title, content, imageData) {
+    const news = load(NEWS_KEY);
+    news.unshift({ title, content, image: imageData });
+    save(NEWS_KEY, news);
+    initApp();
+  }
+
+  // Kleine Funktion zur sicheren HTML-Ausgabe
+  function escapeHtml(text) {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  window.onload = initApp;
+</script>
+
+</body>
+</html>

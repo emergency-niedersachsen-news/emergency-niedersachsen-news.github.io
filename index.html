@@ -49,7 +49,7 @@
       background: #155a96;
     }
     #dashboard, #news, #logout {
-      display: none;
+      /* Nicht standardmäßig ausblenden, wird im Script gesteuert */
     }
     .news-card {
       text-align: left;
@@ -87,6 +87,8 @@
     .delete-news-btn:hover {
       background: #c0392b;
     }
+
+    /* Flex container für News + Dashboard */
     #main-wrapper {
       display: flex;
       gap: 20px;
@@ -98,12 +100,19 @@
     #news, #dashboard {
       flex: 1;
     }
+
+    /* Discord Button */
     .discord-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 12px;
-      background: linear-gradient(270deg, rgb(255, 0, 0), rgb(0, 255, 0), rgb(0, 0, 255), rgb(255, 0, 0));
+      background: linear-gradient(270deg, 
+        rgb(255, 0, 0), 
+        rgb(0, 255, 0), 
+        rgb(0, 0, 255), 
+        rgb(255, 0, 0)
+      );
       background-size: 600% 600%;
       color: white;
       font-weight: bold;
@@ -126,10 +135,17 @@
     .discord-btn:hover {
       filter: brightness(1.1);
     }
+
     @keyframes rgbGradient {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
     }
   </style>
 </head>
@@ -139,9 +155,6 @@
   <h2>Willkommen!</h2>
   <input type="email" id="email" placeholder="E-Mail" autocomplete="username" />
   <input type="password" id="password" placeholder="Passwort" autocomplete="current-password" />
-  <label style="display: flex; align-items: center; justify-content: start; gap: 10px;">
-    <input type="checkbox" id="adminCheck" /> Ich bin Admin
-  </label>
   <button id="loginBtn">Anmelden</button>
   <button id="registerBtn">Registrieren</button>
   <p id="authMsg" style="color: red; min-height: 20px;"></p>
@@ -152,27 +165,30 @@
     <h2>News – Notruf Niedersachsen</h2>
     <div id="newsList"></div>
     <a href="https://discord.gg/dein-normaler-server" target="_blank" rel="noopener noreferrer" class="discord-btn" id="discordBtn">
-      <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" alt="Discord Logo" />
+      <img src="a863c6a7-a6c3-4716-9836-6d7a7dff9349.png" alt="Discord Logo" />
       Zum Discord-Server
     </a>
     <button id="logout" style="margin-top:20px; width: 100%;">Abmelden</button>
   </div>
 
-  <div id="dashboard" class="container">
+  <div id="dashboard" class="container" style="display:none;">
     <h2>Admin-Dashboard</h2>
     <input type="text" id="newsTitle" placeholder="Titel" />
     <textarea id="newsContent" placeholder="Inhalt" style="height:80px;"></textarea>
     <input type="file" id="newsImage" accept="image/*" />
     <button id="addNewsBtn">News hinzufügen</button>
 
+    <!-- Moderatoren Discord Button nur für Admins -->
     <a href="https://discord.gg/dein-moderatoren-server" target="_blank" class="discord-btn" id="modDiscordBtn" rel="noopener noreferrer" style="display:none; margin-top: 30px;">
-      <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" alt="Discord Logo" />
+      <img src="a863c6a7-a6c3-4716-9836-6d7a7dff9349.png" alt="Discord Logo" />
       Moderatoren Discord
     </a>
   </div>
 </div>
 
 <script>
+  const ADMIN_EMAIL = "admin@gmail.com";
+  const ADMIN_PASSWORD = "admin123";
   const USERS_KEY = "nn_users";
   const NEWS_KEY = "nn_news";
 
@@ -187,7 +203,6 @@
   const registerBtn = document.getElementById("registerBtn");
   const emailInput = document.getElementById("email");
   const passInput = document.getElementById("password");
-  const adminCheck = document.getElementById("adminCheck");
   const authMsg = document.getElementById("authMsg");
 
   const newsList = document.getElementById("newsList");
@@ -224,6 +239,7 @@
     dashboardDiv.style.display = currentUser.isAdmin ? "block" : "none";
     modDiscordBtn.style.display = currentUser.isAdmin ? "flex" : "none";
 
+    // Delete buttons Event Listener anlegen
     if (currentUser.isAdmin) {
       document.querySelectorAll(".delete-news-btn").forEach(btn => {
         btn.onclick = () => {
@@ -232,7 +248,7 @@
           news = news.filter(n => n.title !== title);
           save(NEWS_KEY, news);
           initApp();
-        };
+        }
       });
     }
   };
@@ -246,6 +262,15 @@
       return;
     }
 
+    if (email === ADMIN_EMAIL && pw === ADMIN_PASSWORD) {
+      sessionStorage.setItem("nn_currentUser", JSON.stringify({
+        email: email,
+        isAdmin: true
+      }));
+      initApp();
+      return;
+    }
+
     const users = load(USERS_KEY);
     const found = users.find(u => u.email === email && u.password === pw);
     if (!found) {
@@ -255,7 +280,7 @@
 
     sessionStorage.setItem("nn_currentUser", JSON.stringify({
       email: email,
-      isAdmin: found.isAdmin || false
+      isAdmin: false
     }));
     initApp();
   });
@@ -263,7 +288,6 @@
   registerBtn.addEventListener("click", () => {
     const email = emailInput.value.trim();
     const pw = passInput.value;
-    const isAdmin = adminCheck.checked;
 
     if (!email || !pw) {
       authMsg.textContent = "Bitte alle Felder ausfüllen.";
@@ -276,12 +300,12 @@
       return;
     }
 
-    users.push({ email: email, password: pw, isAdmin });
+    users.push({ email: email, password: pw });
     save(USERS_KEY, users);
 
     sessionStorage.setItem("nn_currentUser", JSON.stringify({
       email: email,
-      isAdmin
+      isAdmin: false
     }));
     initApp();
   });
@@ -323,6 +347,7 @@
     initApp();
   }
 
+  // Kleine Funktion zur sicheren HTML-Ausgabe
   function escapeHtml(text) {
     return text
       .replace(/&/g, "&amp;")
@@ -331,12 +356,6 @@
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
   }
-
-  window.onload = initApp;
-</script>
-
-</body>
-</html>
 
   window.onload = initApp;
 </script>

@@ -49,7 +49,7 @@
       background: #155a96;
     }
     #dashboard, #news, #logout {
-      /* Nicht standardmäßig ausblenden, wird im Script gesteuert */
+      display: none;
     }
     .news-card {
       text-align: left;
@@ -87,8 +87,6 @@
     .delete-news-btn:hover {
       background: #c0392b;
     }
-
-    /* Flex container für News + Dashboard */
     #main-wrapper {
       display: flex;
       gap: 20px;
@@ -100,19 +98,12 @@
     #news, #dashboard {
       flex: 1;
     }
-
-    /* Discord Button */
     .discord-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 12px;
-      background: linear-gradient(270deg, 
-        rgb(255, 0, 0), 
-        rgb(0, 255, 0), 
-        rgb(0, 0, 255), 
-        rgb(255, 0, 0)
-      );
+      background: linear-gradient(270deg, rgb(255, 0, 0), rgb(0, 255, 0), rgb(0, 0, 255), rgb(255, 0, 0));
       background-size: 600% 600%;
       color: white;
       font-weight: bold;
@@ -135,17 +126,10 @@
     .discord-btn:hover {
       filter: brightness(1.1);
     }
-
     @keyframes rgbGradient {
-      0% {
-        background-position: 0% 50%;
-      }
-      50% {
-        background-position: 100% 50%;
-      }
-      100% {
-        background-position: 0% 50%;
-      }
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
   </style>
 </head>
@@ -155,6 +139,9 @@
   <h2>Willkommen!</h2>
   <input type="email" id="email" placeholder="E-Mail" autocomplete="username" />
   <input type="password" id="password" placeholder="Passwort" autocomplete="current-password" />
+  <label style="display: flex; align-items: center; justify-content: start; gap: 10px;">
+    <input type="checkbox" id="adminCheck" /> Ich bin Admin
+  </label>
   <button id="loginBtn">Anmelden</button>
   <button id="registerBtn">Registrieren</button>
   <p id="authMsg" style="color: red; min-height: 20px;"></p>
@@ -164,30 +151,26 @@
   <div id="news" class="container">
     <h2>News – Notruf Niedersachsen</h2>
     <div id="newsList"></div>
-    <a href="https://discord.gg/TH7whtJp3b" target="_blank" rel="noopener noreferrer" class="discord-btn" id="discordBtn">
-<img src="https://cdn-icons-png.flaticon.com/512/2111/2111370.png" alt="Discord Logo" />
+    <a href="https://discord.gg/dein-normaler-server" target="_blank" rel="noopener noreferrer" class="discord-btn" id="discordBtn">
+      <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" alt="Discord Logo" />
       Zum Discord-Server
     </a>
     <button id="logout" style="margin-top:20px; width: 100%;">Abmelden</button>
   </div>
 
-  <div id="dashboard" class="container" style="display:none;">
+  <div id="dashboard" class="container">
     <h2>Admin-Dashboard</h2>
     <input type="text" id="newsTitle" placeholder="Titel" />
     <textarea id="newsContent" placeholder="Inhalt" style="height:80px;"></textarea>
     <input type="file" id="newsImage" accept="image/*" />
     <button id="addNewsBtn">News hinzufügen</button>
 
-    <!-- Moderatoren Discord Button nur für Admins -->
-    <a href="https://discord.gg/TH7whtJp3b" target="_blank" class="discord-btn" id="modDiscordBtn" rel="noopener noreferrer" style="display:none; margin-top: 30px;">
-<img src="https://cdn-icons-png.flaticon.com/512/2111/2111370.png" alt="Discord Logo" />
-      Moderatoren Discord in arbeit!
+    <a href="https://discord.gg/dein-moderatoren-server" target="_blank" class="discord-btn" id="modDiscordBtn" rel="noopener noreferrer" style="display:none; margin-top: 30px;">
+      <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" alt="Discord Logo" />
+      Moderatoren Discord
     </a>
   </div>
 </div>
-
-<!-- ⚠️ HTML unverändert (außer Scriptteil am Ende) ⚠️ -->
-<!-- ... alles wie gehabt ... -->
 
 <script>
   const USERS_KEY = "nn_users";
@@ -204,6 +187,7 @@
   const registerBtn = document.getElementById("registerBtn");
   const emailInput = document.getElementById("email");
   const passInput = document.getElementById("password");
+  const adminCheck = document.getElementById("adminCheck");
   const authMsg = document.getElementById("authMsg");
 
   const newsList = document.getElementById("newsList");
@@ -248,7 +232,7 @@
           news = news.filter(n => n.title !== title);
           save(NEWS_KEY, news);
           initApp();
-        }
+        };
       });
     }
   };
@@ -270,8 +254,8 @@
     }
 
     sessionStorage.setItem("nn_currentUser", JSON.stringify({
-      email: found.email,
-      isAdmin: found.isAdmin
+      email: email,
+      isAdmin: found.isAdmin || false
     }));
     initApp();
   });
@@ -279,28 +263,25 @@
   registerBtn.addEventListener("click", () => {
     const email = emailInput.value.trim();
     const pw = passInput.value;
+    const isAdmin = adminCheck.checked;
 
     if (!email || !pw) {
       authMsg.textContent = "Bitte alle Felder ausfüllen.";
       return;
     }
 
-    let users = load(USERS_KEY);
+    const users = load(USERS_KEY);
     if (users.find(u => u.email === email)) {
       authMsg.textContent = "Benutzer existiert bereits!";
       return;
     }
 
-    // Der erste registrierte Benutzer wird automatisch Admin
-    const isFirstUser = users.length === 0;
-    const newUser = { email: email, password: pw, isAdmin: isFirstUser };
-
-    users.push(newUser);
+    users.push({ email: email, password: pw, isAdmin });
     save(USERS_KEY, users);
 
     sessionStorage.setItem("nn_currentUser", JSON.stringify({
       email: email,
-      isAdmin: newUser.isAdmin
+      isAdmin
     }));
     initApp();
   });
@@ -350,6 +331,12 @@
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
   }
+
+  window.onload = initApp;
+</script>
+
+</body>
+</html>
 
   window.onload = initApp;
 </script>

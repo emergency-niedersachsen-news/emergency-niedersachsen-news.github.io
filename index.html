@@ -186,9 +186,10 @@
   </div>
 </div>
 
+<!-- ⚠️ HTML unverändert (außer Scriptteil am Ende) ⚠️ -->
+<!-- ... alles wie gehabt ... -->
+
 <script>
-  const ADMIN_EMAIL = "Emergency-Niedersachsen.moderator@gmail.com";
-  const ADMIN_PASSWORD = "Emergency-niedersachsen.moderator.2024!?_Admin-Passwort";
   const USERS_KEY = "nn_users";
   const NEWS_KEY = "nn_news";
 
@@ -239,7 +240,6 @@
     dashboardDiv.style.display = currentUser.isAdmin ? "block" : "none";
     modDiscordBtn.style.display = currentUser.isAdmin ? "flex" : "none";
 
-    // Delete buttons Event Listener anlegen
     if (currentUser.isAdmin) {
       document.querySelectorAll(".delete-news-btn").forEach(btn => {
         btn.onclick = () => {
@@ -262,15 +262,6 @@
       return;
     }
 
-    if (email === ADMIN_EMAIL && pw === ADMIN_PASSWORD) {
-      sessionStorage.setItem("nn_currentUser", JSON.stringify({
-        email: email,
-        isAdmin: true
-      }));
-      initApp();
-      return;
-    }
-
     const users = load(USERS_KEY);
     const found = users.find(u => u.email === email && u.password === pw);
     if (!found) {
@@ -279,8 +270,8 @@
     }
 
     sessionStorage.setItem("nn_currentUser", JSON.stringify({
-      email: email,
-      isAdmin: false
+      email: found.email,
+      isAdmin: found.isAdmin
     }));
     initApp();
   });
@@ -294,18 +285,22 @@
       return;
     }
 
-    const users = load(USERS_KEY);
+    let users = load(USERS_KEY);
     if (users.find(u => u.email === email)) {
       authMsg.textContent = "Benutzer existiert bereits!";
       return;
     }
 
-    users.push({ email: email, password: pw });
+    // Der erste registrierte Benutzer wird automatisch Admin
+    const isFirstUser = users.length === 0;
+    const newUser = { email: email, password: pw, isAdmin: isFirstUser };
+
+    users.push(newUser);
     save(USERS_KEY, users);
 
     sessionStorage.setItem("nn_currentUser", JSON.stringify({
       email: email,
-      isAdmin: false
+      isAdmin: newUser.isAdmin
     }));
     initApp();
   });
@@ -347,7 +342,6 @@
     initApp();
   }
 
-  // Kleine Funktion zur sicheren HTML-Ausgabe
   function escapeHtml(text) {
     return text
       .replace(/&/g, "&amp;")
